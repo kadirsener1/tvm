@@ -598,29 +598,6 @@ https://bcovlive-a.akamaihd.net/764299a9db4b429aa9250edc9e791156/eu-central-1/64
 
 
 
-#EXTINF:0 CUID="82" tvg-chno="null" tvg-name="SRB: ARENA SPORT 1" tvg-logo="https://logo.iptveditor.com/arenasport1eu.png" group-title="WS ▹ World Sports",SRB: ARENA SPORT 1
-https://www.freeproxy.me/?q=mdmsp6dzYZDbz6CYpp6skJ2mq5ykpaejX6aqZamboZtg1aqcoaKnzpiYa2OlqKPRYKRrpm0
-#EXTINF:0 CUID="83" tvg-chno="null" tvg-name="SRB: ARENA SPORT 2" tvg-logo="https://logo.iptveditor.com/arenasport2eu.png" group-title="WS ▹ World Sports",SRB: ARENA SPORT 2
-https://zekonew.iosplayer.ru/zeko/premium430/mono.m3u8
-#EXTINF:0 CUID="85" tvg-chno="null" tvg-name="SRB: ARENA SPORT 3" tvg-logo="https://logo.iptveditor.com/arenasport3eu.png" group-title="WS ▹ World Sports",SRB: ARENA SPORT 3
-https://www.freeproxy.me/?q=mdmsp6dzYZDbz6CYpp6skJ2mq5ykpaejX6aqZamboZtg1aqcoaKnzpiZY2OlqKPRYKRrpm0
-#EXTINF:0 CUID="84" tvg-chno="null" tvg-name="SRB: ARENA SPORT 4" tvg-logo="https://logo.iptveditor.com/arenasport4eu.png" group-title="WS ▹ World Sports",SRB: ARENA SPORT 4
-https://www.freeproxy.me/?q=mdmsp6dzYZDbz6CYpp6skJ2mq5ykpaejX6aqZamboZtg1aqcoaKnzpmeY2OlqKPRYKRrpm0
-#EXTINF:0 CUID="86" tvg-chno="null" tvg-name="HR: ARENA SPORT 1" tvg-logo="https://logo.iptveditor.com/arenasport1eu.png" group-title="WS ▹ World Sports",HR: ARENA SPORT 1
-https://ddy6new.iosplayer.ru/ddy6/premium432/mono.m3u8
-#EXTINF:0 CUID="87" tvg-chno="null" tvg-name="HR: ARENA SPORT 2" tvg-logo="https://logo.iptveditor.com/arenasport2eu.png" group-title="WS ▹ World Sports",HR: ARENA SPORT 2
-https://zekonew.iosplayer.ru/zeko/premium433/mono.m3u8
-#EXTINF:0 CUID="88" tvg-chno="null" tvg-name="HR: ARENA SPORT 3" tvg-logo="https://logo.iptveditor.com/arenasport3eu.png" group-title="WS ▹ World Sports",HR: ARENA SPORT 3
-https://ddy6new.iosplayer.ru/ddy6/premium434/mono.m3u8
-#EXTINF:0 CUID="89" tvg-chno="null" tvg-name="HR: ARENA SPORT 4" tvg-logo="https://logo.iptveditor.com/arenasport4eu.png" group-title="WS ▹ World Sports",HR: ARENA SPORT 4
-https://windnew.iosplayer.ru/wind/premium580/mono.m3u8
-#EXTINF:0 CUID="91" tvg-chno="null" tvg-name="US: ALTITUDE SPORT" tvg-logo="https://logo.iptveditor.com/altitudesports.png" group-title="WS ▹ World Sports",US: ALTITUDE SPORT
-https://ddh2new.iosplayer.ru/ddh2/premium923/mono.m3u8
-#EXTINF:0 CUID="92" tvg-chno="null" tvg-name="HR: ARENA SPORT 1" tvg-logo="https://logo.iptveditor.com/arenasport1eu.png" group-title="WS ▹ World Sports",HR: ARENA SPORT 1
-https://ddy6new.iosplayer.ru/ddy6/premium432/mono.m3u8
-#EXTINF:0 CUID="91" tvg-chno="null" tvg-name="US: ALTITUDE SPORT" tvg-logo="https://logo.iptveditor.com/altitudesports.png" group-title="WS ▹ World Sports",US: diema
-https://top2new.iosplayer.ru/top2/diemasport1/mono.m3u8
-
 
 #EXTINF:0 CUID="1635" tvg-chno="null" tvg-name="TRT 1" tvg-logo="https://logo.iptveditor.com/trt1.png" group-title="ULUSAL KANALLAR",TRT 11
 https://tv-trt1.medya.trt.com.tr/master_1080.m3u8
@@ -989,4 +966,3 @@ http://0e770a63.ucomist.net/iptv/3HYPASK67VVUSL/6295/index.m3u8
 http://0e770a63.ucomist.net/iptv/3HYPASK67VVUSL/6296/index.m3u8
 #EXTINF:0, group-title="İPTV XXX", Канал 6297
 http://0e770a63.ucomist.net/iptv/3HYPASK67VVUSL/6297/index.m3u8
-#EXTINF:0, group-title="İPTV XXX", Канал 6298
