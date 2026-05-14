@@ -1,0 +1,178 @@
+{
+  "admin": {
+    "username": "admin",
+    "password": "$2a$10$8K1p/a0dL1LXMIgoEDFrwOfMQkf9GW7cKbFDdKI/YkFbC3Y0VN5sei"
+  },
+  "users": [],
+  "channels": [
+    {
+      "id": "demo-ch-001",
+      "name": "TRT 1 HD",
+      "url": "http://tv-trt1.medya.trt.com.tr/master.m3u8",
+      "category": "Türkiye",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/TRT_1_logo_%282021-%29.svg/1200px-TRT_1_logo_%282021-%29.svg.png",
+      "epgId": "trt1.tr",
+      "status": "active",
+      "order": 1,
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    {
+      "id": "demo-ch-002",
+      "name": "TRT Haber",
+      "url": "http://tv-trthaber.medya.trt.com.tr/master.m3u8",
+      "category": "Haber",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/TRT_Haber_logo_%282022-%29.svg/1200px-TRT_Haber_logo_%282022-%29.svg.png",
+      "epgId": "trthaber.tr",
+      "status": "active",
+      "order": 2,
+      "createdAt": 1700000001000,
+      "updatedAt": 1700000001000
+    },
+    {
+      "id": "demo-ch-003",
+      "name": "TRT Spor",
+      "url": "http://tv-trtspor1.medya.trt.com.tr/master.m3u8",
+      "category": "Spor",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/TRT_Spor_logo_%282022-%29.svg/1200px-TRT_Spor_logo_%282022-%29.svg.png",
+      "epgId": "trtspor.tr",
+      "status": "active",
+      "order": 3,
+      "createdAt": 1700000002000,
+      "updatedAt": 1700000002000
+    },
+    {
+      "id": "demo-ch-004",
+      "name": "TRT Belgesel",
+      "url": "http://tv-trtbelgesel.medya.trt.com.tr/master.m3u8",
+      "category": "Belgesel",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/TRT_Belgesel_logo_%282022-%29.svg/1200px-TRT_Belgesel_logo_%282022-%29.svg.png",
+      "epgId": "trtbelgesel.tr",
+      "status": "active",
+      "order": 4,
+      "createdAt": 1700000003000,
+      "updatedAt": 1700000003000
+    },
+    {
+      "id": "demo-ch-005",
+      "name": "TRT Çocuk",
+      "url": "http://tv-trtcocuk.medya.trt.com.tr/master.m3u8",
+      "category": "Çocuk",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/TRT_%C3%87ocuk_logo_%282022-%29.svg/1200px-TRT_%C3%87ocuk_logo_%282022-%29.svg.png",
+      "epgId": "trtcocuk.tr",
+      "status": "active",
+      "order": 5,
+      "createdAt": 1700000004000,
+      "updatedAt": 1700000004000
+    },
+    {
+      "id": "demo-ch-006",
+      "name": "TRT Müzik",
+      "url": "http://tv-trtmuzik.medya.trt.com.tr/master.m3u8",
+      "category": "Müzik",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/TRT_M%C3%BCzik_logo_%282019-%29.svg/1200px-TRT_M%C3%BCzik_logo_%282019-%29.svg.png",
+      "epgId": "trtmuzik.tr",
+      "status": "active",
+      "order": 6,
+      "createdAt": 1700000005000,
+      "updatedAt": 1700000005000
+    },
+    {
+      "id": "demo-ch-007",
+      "name": "TRT World",
+      "url": "http://tv-trtworld.medya.trt.com.tr/master.m3u8",
+      "category": "Uluslararası",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/TRT_World_logo.svg/1200px-TRT_World_logo.svg.png",
+      "epgId": "trtworld.tr",
+      "status": "active",
+      "order": 7,
+      "createdAt": 1700000006000,
+      "updatedAt": 1700000006000
+    },
+    {
+      "id": "demo-ch-008",
+      "name": "TRT Kurdî",
+      "url": "http://tv-trtkurdi.medya.trt.com.tr/master.m3u8",
+      "category": "Türkiye",
+      "logo": "",
+      "epgId": "trtkurdi.tr",
+      "status": "active",
+      "order": 8,
+      "createdAt": 1700000007000,
+      "updatedAt": 1700000007000
+    },
+    {
+      "id": "demo-ch-009",
+      "name": "TBMM TV",
+      "url": "http://tv-tbmmtv.medya.trt.com.tr/master.m3u8",
+      "category": "Haber",
+      "logo": "",
+      "epgId": "tbmmtv.tr",
+      "status": "active",
+      "order": 9,
+      "createdAt": 1700000008000,
+      "updatedAt": 1700000008000
+    },
+    {
+      "id": "demo-ch-010",
+      "name": "TRT Spor 2",
+      "url": "http://tv-trtspor2.medya.trt.com.tr/master.m3u8",
+      "category": "Spor",
+      "logo": "",
+      "epgId": "trtspor2.tr",
+      "status": "active",
+      "order": 10,
+      "createdAt": 1700000009000,
+      "updatedAt": 1700000009000
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-001",
+      "name": "Türkiye",
+      "icon": "fas fa-flag",
+      "color": "#e0245e"
+    },
+    {
+      "id": "cat-002",
+      "name": "Haber",
+      "icon": "fas fa-newspaper",
+      "color": "#1da1f2"
+    },
+    {
+      "id": "cat-003",
+      "name": "Spor",
+      "icon": "fas fa-futbol",
+      "color": "#17bf63"
+    },
+    {
+      "id": "cat-004",
+      "name": "Belgesel",
+      "icon": "fas fa-globe",
+      "color": "#794bc4"
+    },
+    {
+      "id": "cat-005",
+      "name": "Çocuk",
+      "icon": "fas fa-child",
+      "color": "#ffad1f"
+    },
+    {
+      "id": "cat-006",
+      "name": "Müzik",
+      "icon": "fas fa-music",
+      "color": "#e91e8c"
+    },
+    {
+      "id": "cat-007",
+      "name": "Uluslararası",
+      "icon": "fas fa-globe-americas",
+      "color": "#1dcaff"
+    }
+  ],
+  "links": [],
+  "settings": {
+    "siteName": "IPTV Panel",
+    "maxLinksPerUser": 50
+  }
+}
