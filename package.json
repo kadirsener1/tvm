@@ -1,5 +1,5 @@
 {
-  "name": "iptv-panel",
+  "name": "iptv-paneli",
   "version": "2.0.0",
   "description": "IPTV Yönetim Paneli - Node.js Backend",
   "main": "server.js",
