@@ -1,961 +1,655 @@
-// ===== IPTV Panel - Full Application =====
+(function(){
+'use strict';
 
-(function () {
-    'use strict';
+/* ===========================
+   DATA LAYER
+   =========================== */
+const DB={
+    channels:()=>JSON.parse(localStorage.getItem('iptv_ch')||'[]'),
+    saveChannels:d=>localStorage.setItem('iptv_ch',JSON.stringify(d)),
+    categories:()=>JSON.parse(localStorage.getItem('iptv_cats')||'[]'),
+    saveCats:d=>localStorage.setItem('iptv_cats',JSON.stringify(d)),
+    theme:()=>localStorage.getItem('iptv_theme')||'dark',
+    saveTheme:t=>localStorage.setItem('iptv_theme',t)
+};
 
-    // ===== DATA STORE =====
-    const DEFAULT_USER = { username: 'admin', password: 'admin123' };
+function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,8)}
+function esc(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML}
 
-    function getUser() {
-        return JSON.parse(localStorage.getItem('iptv_user')) || { ...DEFAULT_USER };
+/* ===========================
+   TOAST
+   =========================== */
+function toast(msg,type='i'){
+    const c=document.getElementById('toasts');
+    const icons={s:'fa-check-circle',e:'fa-exclamation-circle',w:'fa-exclamation-triangle',i:'fa-info-circle'};
+    const el=document.createElement('div');
+    el.className=`toast ${type}`;
+    el.innerHTML=`<i class="fas ${icons[type]}"></i><span>${msg}</span>`;
+    c.appendChild(el);
+    setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),250)},3000);
+}
+
+/* ===========================
+   SELECTORS
+   =========================== */
+const $=s=>document.querySelector(s);
+const $$=s=>document.querySelectorAll(s);
+
+/* ===========================
+   NAVIGATION
+   =========================== */
+const pageTitles={
+    dashboard:'Dashboard',channels:'Kanallar',addChannel:'Kanal Ekle',
+    categories:'Kategoriler',importM3U:'M3U İçe Aktar',exportM3U:'M3U İndir',settings:'Ayarlar'
+};
+
+function navigateTo(page){
+    $$('.nav-item').forEach(n=>n.classList.remove('active'));
+    $$('.page').forEach(p=>p.classList.remove('active'));
+    const nav=$(`.nav-item[data-page="${page}"]`);
+    const pg=$(`#page-${page}`);
+    if(nav)nav.classList.add('active');
+    if(pg)pg.classList.add('active');
+    $('#topbarTitle').textContent=pageTitles[page]||'';
+    $('#sidebar').classList.remove('open');
+    if(page==='dashboard')refreshDashboard();
+    if(page==='channels'){refreshCatFilters();renderChannels()}
+    if(page==='addChannel')prepareAddForm();
+    if(page==='categories')renderCategories();
+    if(page==='importM3U')refreshImportCatSelect();
+    if(page==='exportM3U')refreshExportFilters();
+}
+
+$$('.nav-item').forEach(n=>n.addEventListener('click',e=>{e.preventDefault();navigateTo(n.dataset.page)}));
+$$('.qa-btn').forEach(b=>b.addEventListener('click',()=>navigateTo(b.dataset.go)));
+
+// mobile menu
+$('#menuToggle').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
+$('#sidebarClose').addEventListener('click',()=>$('#sidebar').classList.remove('open'));
+document.addEventListener('click',e=>{
+    if(window.innerWidth<=768&&$('#sidebar').classList.contains('open')&&!$('#sidebar').contains(e.target)&&!$('#menuToggle').contains(e.target))
+        $('#sidebar').classList.remove('open');
+});
+
+/* ===========================
+   THEME
+   =========================== */
+function applyTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    DB.saveTheme(t);
+    $$('.theme-btn').forEach(b=>b.classList.toggle('active',b.dataset.theme===t));
+}
+$$('.theme-btn').forEach(b=>b.addEventListener('click',()=>{applyTheme(b.dataset.theme);toast('Tema değiştirildi','s')}));
+
+/* ===========================
+   DASHBOARD
+   =========================== */
+function refreshDashboard(){
+    const ch=DB.channels(),cats=DB.categories();
+    const groups=[...new Set(ch.map(c=>c.category).filter(Boolean))];
+    const active=ch.filter(c=>c.status==='active');
+
+    $('#statTotal').textContent=ch.length;
+    $('#statCats').textContent=cats.length;
+    $('#statActive').textContent=active.length;
+    $('#statInactive').textContent=ch.length-active.length;
+    $('#totalBadgeCount').textContent=ch.length;
+
+    // Recent
+    const recent=[...ch].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,6);
+    $('#recentList').innerHTML=recent.length?recent.map(c=>`
+        <div class="recent-row">
+            <div class="r-logo">${c.logo?`<img src="${esc(c.logo)}" onerror="this.parentElement.textContent='${esc(c.name).charAt(0)}'">`:esc(c.name).charAt(0)}</div>
+            <span class="r-name">${esc(c.name)}</span>
+            <span class="r-cat">${esc(c.category||'—')}</span>
+        </div>
+    `).join(''):'<p style="color:var(--t3);font-size:13px">Henüz kanal eklenmemiş.</p>';
+
+    // Chart
+    const gc={};ch.forEach(c=>{const g=c.category||'Kategorisiz';gc[g]=(gc[g]||0)+1});
+    const mx=Math.max(...Object.values(gc),1);
+    const catColors={};cats.forEach(c=>catColors[c.name]=c.color);
+    $('#catChart').innerHTML=Object.entries(gc).sort((a,b)=>b[1]-a[1]).map(([n,v])=>`
+        <div class="bar-row">
+            <div class="bar-label"><span>${esc(n)}</span><span>${v}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${v/mx*100}%;background:${catColors[n]||'var(--accent)'}"></div></div>
+        </div>
+    `).join('')||'<p style="color:var(--t3);font-size:13px">Veri yok.</p>';
+}
+
+/* ===========================
+   CATEGORIES
+   =========================== */
+function renderCategories(){
+    const cats=DB.categories();
+    const ch=DB.channels();
+    $('#catList').innerHTML=cats.length?cats.map(c=>{
+        const count=ch.filter(x=>x.category===c.name).length;
+        return`
+        <div class="cat-card">
+            <div class="cat-icon" style="background:${c.color||'var(--accent)'}">
+                <i class="${c.icon||'fas fa-folder'}"></i>
+            </div>
+            <div class="cat-info">
+                <h4>${esc(c.name)}</h4>
+                <p>${count} kanal</p>
+            </div>
+            <div class="cat-actions">
+                <button class="btn btn-xs btn-outline cat-edit" data-id="${c.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-xs btn-danger cat-del" data-id="${c.id}" title="Sil"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join(''):'<p style="color:var(--t3);padding:20px">Henüz kategori eklenmemiş. Yukarıdan ekleyebilirsiniz.</p>';
+
+    // bind
+    $$('.cat-edit').forEach(b=>b.addEventListener('click',()=>editCategory(b.dataset.id)));
+    $$('.cat-del').forEach(b=>b.addEventListener('click',()=>deleteCategory(b.dataset.id)));
+}
+
+$('#catForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const editId=$('#catEditId').value;
+    const name=$('#catName').value.trim();
+    const icon=$('#catIcon').value.trim()||'fas fa-folder';
+    const color=$('#catColor').value;
+    if(!name)return toast('Kategori adı gerekli','w');
+
+    const cats=DB.categories();
+
+    if(editId){
+        const oldCat=cats.find(c=>c.id===editId);
+        const oldName=oldCat?oldCat.name:'';
+        const idx=cats.findIndex(c=>c.id===editId);
+        if(idx>=0){
+            cats[idx]={...cats[idx],name,icon,color};
+            // Update channels with old category name
+            if(oldName&&oldName!==name){
+                const chs=DB.channels();
+                chs.forEach(ch=>{if(ch.category===oldName)ch.category=name});
+                DB.saveChannels(chs);
+            }
+        }
+        toast('Kategori güncellendi','s');
+    }else{
+        if(cats.some(c=>c.name.toLowerCase()===name.toLowerCase()))return toast('Bu kategori zaten var','w');
+        cats.push({id:uid(),name,icon,color});
+        toast(`"${name}" kategorisi eklendi`,'s');
     }
 
-    function saveUser(user) {
-        localStorage.setItem('iptv_user', JSON.stringify(user));
-    }
+    DB.saveCats(cats);
+    $('#catForm').reset();$('#catEditId').value='';
+    $('#catSaveBtn').innerHTML='<i class="fas fa-plus"></i> Ekle';
+    $('#catCancelBtn').style.display='none';
+    $('#catColor').value='#1da1f2';
+    renderCategories();
+});
 
-    function getChannels() {
-        return JSON.parse(localStorage.getItem('iptv_channels')) || [];
-    }
+$('#catCancelBtn').addEventListener('click',()=>{
+    $('#catForm').reset();$('#catEditId').value='';
+    $('#catSaveBtn').innerHTML='<i class="fas fa-plus"></i> Ekle';
+    $('#catCancelBtn').style.display='none';
+    $('#catColor').value='#1da1f2';
+});
 
-    function saveChannels(channels) {
-        localStorage.setItem('iptv_channels', JSON.stringify(channels));
-    }
+function editCategory(id){
+    const cats=DB.categories();
+    const c=cats.find(x=>x.id===id);
+    if(!c)return;
+    $('#catEditId').value=c.id;
+    $('#catName').value=c.name;
+    $('#catIcon').value=c.icon||'';
+    $('#catColor').value=c.color||'#1da1f2';
+    $('#catSaveBtn').innerHTML='<i class="fas fa-save"></i> Güncelle';
+    $('#catCancelBtn').style.display='inline-flex';
+    $('#catName').focus();
+}
 
-    function getTheme() {
-        return localStorage.getItem('iptv_theme') || 'dark';
-    }
+function deleteCategory(id){
+    const cats=DB.categories();
+    const c=cats.find(x=>x.id===id);
+    if(!c)return;
+    if(!confirm(`"${c.name}" kategorisini silmek istediğinize emin misiniz?`))return;
+    const updated=cats.filter(x=>x.id!==id);
+    DB.saveCats(updated);
+    // Clear category from channels
+    const chs=DB.channels();
+    chs.forEach(ch=>{if(ch.category===c.name)ch.category=''});
+    DB.saveChannels(chs);
+    renderCategories();
+    toast('Kategori silindi','s');
+}
 
-    function saveTheme(theme) {
-        localStorage.setItem('iptv_theme', theme);
-    }
+// Icon hints click
+$$('.icon-hint').forEach(h=>h.addEventListener('click',()=>{
+    $('#catIcon').value=h.dataset.icon;
+    $('#catIcon').focus();
+}));
 
-    function generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    }
+/* ===========================
+   CHANNEL CRUD
+   =========================== */
+function getCatOptions(selected=''){
+    const cats=DB.categories();
+    return '<option value="">Kategori Seçin</option>'+cats.map(c=>`<option value="${esc(c.name)}" ${c.name===selected?'selected':''}>${esc(c.name)}</option>`).join('');
+}
 
-    // ===== TOAST =====
-    function showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        const icons = {
-            success: 'fas fa-check-circle',
-            error: 'fas fa-exclamation-circle',
-            warning: 'fas fa-exclamation-triangle',
-            info: 'fas fa-info-circle'
+function refreshCatFilters(){
+    const cats=DB.categories();
+    const opts='<option value="">Tüm Kategoriler</option>'+cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+    $('#filterCat').innerHTML=opts;
+}
+
+function prepareAddForm(){
+    $('#chEditId').value='';
+    $('#channelForm').reset();
+    $('#chCategory').innerHTML=getCatOptions();
+    $('#chSaveBtn').innerHTML='<i class="fas fa-save"></i> Kaydet';
+    $('#chCancelBtn').style.display='none';
+}
+
+$('#channelForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const editId=$('#chEditId').value;
+    const data={
+        id:editId||uid(),
+        name:$('#chName').value.trim(),
+        url:$('#chUrl').value.trim(),
+        category:$('#chCategory').value,
+        logo:$('#chLogo').value.trim(),
+        epgId:$('#chEpg').value.trim(),
+        status:$('#chStatus').value,
+        order:parseInt($('#chOrder').value)||0,
+        updatedAt:Date.now()
+    };
+    if(!data.name||!data.url)return toast('Ad ve URL zorunlu','w');
+
+    const channels=DB.channels();
+    if(editId){
+        const idx=channels.findIndex(c=>c.id===editId);
+        if(idx>=0){data.createdAt=channels[idx].createdAt;channels[idx]=data}
+        toast(`"${data.name}" güncellendi`,'s');
+    }else{
+        data.createdAt=Date.now();
+        channels.push(data);
+        toast(`"${data.name}" eklendi`,'s');
+    }
+    DB.saveChannels(channels);
+    prepareAddForm();
+    $('#totalBadgeCount').textContent=channels.length;
+});
+
+$('#chCancelBtn').addEventListener('click',()=>prepareAddForm());
+
+// Channels list
+let curPage=1;const perPage=20;
+let selected=new Set();
+
+function renderChannels(){
+    const all=DB.channels();
+    const search=($('#searchInput')?.value||'').toLowerCase();
+    const fCat=$('#filterCat')?.value||'';
+    const fStatus=$('#filterStatus')?.value||'';
+
+    let filtered=all.filter(c=>{
+        const ms=c.name.toLowerCase().includes(search)||(c.category||'').toLowerCase().includes(search)||c.url.toLowerCase().includes(search);
+        const mc=!fCat||c.category===fCat;
+        const mst=!fStatus||c.status===fStatus;
+        return ms&&mc&&mst;
+    });
+    filtered.sort((a,b)=>(a.order||0)-(b.order||0)||a.name.localeCompare(b.name));
+
+    const totalP=Math.ceil(filtered.length/perPage)||1;
+    if(curPage>totalP)curPage=totalP;
+    const start=(curPage-1)*perPage;
+    const page=filtered.slice(start,start+perPage);
+
+    const cats=DB.categories();
+    const catColors={};cats.forEach(c=>catColors[c.name]=c.color);
+
+    $('#channelList').innerHTML=page.length?page.map(c=>`
+        <div class="ch-card ${c.status==='inactive'?'off':''}" data-id="${c.id}">
+            <input type="checkbox" class="ch-cb" data-id="${c.id}" ${selected.has(c.id)?'checked':''}>
+            ${c.logo?`<img src="${esc(c.logo)}" class="ch-logo" onerror="this.outerHTML='<div class=\\'ch-logo-ph\\'>${esc(c.name).charAt(0)}</div>'">`:`<div class="ch-logo-ph">${esc(c.name).charAt(0)}</div>`}
+            <div class="ch-info">
+                <div class="ch-name">${esc(c.name)}</div>
+                <div class="ch-meta">
+                    ${c.category?`<span><i class="fas fa-folder" style="color:${catColors[c.category]||'var(--accent)'}"></i> ${esc(c.category)}</span>`:''}
+                    ${c.epgId?`<span><i class="fas fa-book"></i> ${esc(c.epgId)}</span>`:''}
+                </div>
+                <div class="ch-url" title="${esc(c.url)}">${esc(c.url)}</div>
+            </div>
+            <span class="ch-badge ${c.status==='active'?'badge-on':'badge-off'}">${c.status==='active'?'Aktif':'Pasif'}</span>
+            <div class="ch-actions">
+                <button class="btn btn-xs btn-outline ch-edit" data-id="${c.id}" title="Düzenle"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-xs btn-warn ch-toggle" data-id="${c.id}" title="Durum"><i class="fas fa-${c.status==='active'?'toggle-on':'toggle-off'}"></i></button>
+                <button class="btn btn-xs btn-danger ch-del" data-id="${c.id}" title="Sil"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    `).join(''):'<p style="text-align:center;color:var(--t3);padding:40px">Kanal bulunamadı.</p>';
+
+    // Pagination
+    let ph='';
+    if(totalP>1){
+        ph+=`<button ${curPage===1?'disabled':''} data-p="${curPage-1}"><i class="fas fa-chevron-left"></i></button>`;
+        for(let i=1;i<=totalP;i++){
+            if(totalP<=7||i===1||i===totalP||Math.abs(i-curPage)<=1){
+                ph+=`<button class="${i===curPage?'active':''}" data-p="${i}">${i}</button>`;
+            }else if(Math.abs(i-curPage)===2){
+                ph+=`<button disabled>…</button>`;
+            }
+        }
+        ph+=`<button ${curPage===totalP?'disabled':''} data-p="${curPage+1}"><i class="fas fa-chevron-right"></i></button>`;
+    }
+    $('#paginationBar').innerHTML=ph;
+
+    bindChannelEvents();
+}
+
+function bindChannelEvents(){
+    $$('.ch-cb').forEach(cb=>cb.addEventListener('change',()=>{cb.checked?selected.add(cb.dataset.id):selected.delete(cb.dataset.id)}));
+    $$('.ch-edit').forEach(b=>b.addEventListener('click',()=>openEditModal(b.dataset.id)));
+    $$('.ch-toggle').forEach(b=>b.addEventListener('click',()=>toggleCh(b.dataset.id)));
+    $$('.ch-del').forEach(b=>b.addEventListener('click',()=>deleteCh(b.dataset.id)));
+    $$('#paginationBar button:not([disabled])').forEach(b=>b.addEventListener('click',()=>{curPage=parseInt(b.dataset.p);renderChannels()}));
+}
+
+$('#searchInput')?.addEventListener('input',()=>{curPage=1;renderChannels()});
+$('#filterCat')?.addEventListener('change',()=>{curPage=1;renderChannels()});
+$('#filterStatus')?.addEventListener('change',()=>{curPage=1;renderChannels()});
+
+$('#selectAllBtn').addEventListener('click',()=>{
+    const ch=DB.channels();
+    if(ch.length===selected.size){selected.clear()}else{ch.forEach(c=>selected.add(c.id))}
+    renderChannels();
+});
+
+$('#deleteSelBtn').addEventListener('click',()=>{
+    if(!selected.size)return toast('Kanal seçin','w');
+    if(!confirm(`${selected.size} kanal silinecek. Emin misiniz?`))return;
+    let ch=DB.channels().filter(c=>!selected.has(c.id));
+    DB.saveChannels(ch);selected.clear();renderChannels();
+    $('#totalBadgeCount').textContent=ch.length;
+    toast('Seçili kanallar silindi','s');
+});
+
+function toggleCh(id){
+    const ch=DB.channels();const c=ch.find(x=>x.id===id);
+    if(c){c.status=c.status==='active'?'inactive':'active';DB.saveChannels(ch);renderChannels();toast(`${c.name} ${c.status==='active'?'aktif':'pasif'}`,'s')}
+}
+
+function deleteCh(id){
+    const ch=DB.channels();const c=ch.find(x=>x.id===id);
+    if(c&&confirm(`"${c.name}" silinsin mi?`)){
+        DB.saveChannels(ch.filter(x=>x.id!==id));selected.delete(id);renderChannels();
+        $('#totalBadgeCount').textContent=DB.channels().length;
+        toast(`"${c.name}" silindi`,'s');
+    }
+}
+
+/* ===========================
+   EDIT MODAL
+   =========================== */
+function openEditModal(id){
+    const ch=DB.channels();const c=ch.find(x=>x.id===id);if(!c)return;
+    $('#edId').value=c.id;
+    $('#edName').value=c.name;
+    $('#edUrl').value=c.url;
+    $('#edCategory').innerHTML=getCatOptions(c.category);
+    $('#edLogo').value=c.logo||'';
+    $('#edEpg').value=c.epgId||'';
+    $('#edStatus').value=c.status||'active';
+    $('#edOrder').value=c.order||0;
+    $('#editModal').classList.remove('hidden');
+}
+
+function closeModal(){$('#editModal').classList.add('hidden')}
+$('#modalX').addEventListener('click',closeModal);
+$('#modalCancel').addEventListener('click',closeModal);
+$('.modal-bg').addEventListener('click',closeModal);
+
+$('#editForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const id=$('#edId').value;const ch=DB.channels();const idx=ch.findIndex(c=>c.id===id);
+    if(idx>=0){
+        ch[idx]={...ch[idx],
+            name:$('#edName').value.trim(),
+            url:$('#edUrl').value.trim(),
+            category:$('#edCategory').value,
+            logo:$('#edLogo').value.trim(),
+            epgId:$('#edEpg').value.trim(),
+            status:$('#edStatus').value,
+            order:parseInt($('#edOrder').value)||0,
+            updatedAt:Date.now()
         };
-
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.innerHTML = `<i class="${icons[type]}"></i><span>${message}</span>`;
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.add('removing');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
+        DB.saveChannels(ch);closeModal();renderChannels();
+        toast(`"${ch[idx].name}" güncellendi`,'s');
     }
+});
 
-    // ===== DOM REFS =====
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => document.querySelectorAll(sel);
-
-    // ===== LOGIN =====
-    const loginScreen = $('#loginScreen');
-    const mainPanel = $('#mainPanel');
-    const loginForm = $('#loginForm');
-    const loginError = $('#loginError');
-
-    function checkSession() {
-        const session = sessionStorage.getItem('iptv_logged_in');
-        if (session === 'true') {
-            showPanel();
-        }
+/* ===========================
+   M3U PARSER
+   =========================== */
+function parseM3U(text){
+    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    const result=[];let cur=null;
+    for(let i=0;i<lines.length;i++){
+        const l=lines[i];
+        if(l.startsWith('#EXTINF')){
+            cur={};
+            cur.epgId=getAttr(l,'tvg-id');
+            const tvgName=getAttr(l,'tvg-name');
+            cur.logo=getAttr(l,'tvg-logo');
+            cur.group=getAttr(l,'group-title');
+            const ci=l.lastIndexOf(',');
+            cur.name=tvgName||(ci>=0?l.substring(ci+1).trim():'')||'Bilinmeyen';
+        }else if(l.startsWith('#')){continue}
+        else if(cur){cur.url=l;result.push({...cur});cur=null}
     }
-
-    function showPanel() {
-        loginScreen.classList.add('hidden');
-        mainPanel.classList.remove('hidden');
-        const user = getUser();
-        $('#currentUser').textContent = user.username;
-        updateDashboard();
-        updateGroupFilters();
-    }
-
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const user = getUser();
-        const username = $('#username').value.trim();
-        const password = $('#password').value;
-
-        if (username === user.username && password === user.password) {
-            sessionStorage.setItem('iptv_logged_in', 'true');
-            loginError.textContent = '';
-            showPanel();
-            showToast('Giriş başarılı!', 'success');
-        } else {
-            loginError.textContent = 'Kullanıcı adı veya şifre hatalı!';
-            loginError.style.animation = 'none';
-            loginError.offsetHeight; // reflow
-            loginError.style.animation = 'fadeIn 0.3s ease';
-        }
-    });
-
-    $('#logoutBtn').addEventListener('click', () => {
-        sessionStorage.removeItem('iptv_logged_in');
-        mainPanel.classList.add('hidden');
-        loginScreen.classList.remove('hidden');
-        $('#username').value = '';
-        $('#password').value = '';
-        showToast('Çıkış yapıldı.', 'info');
-    });
-
-    // ===== NAVIGATION =====
-    const navItems = $$('.nav-item');
-    const pages = $$('.page');
-
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = item.dataset.page;
-            navigateTo(page);
-        });
-    });
-
-    function navigateTo(page) {
-        navItems.forEach(n => n.classList.remove('active'));
-        pages.forEach(p => p.classList.remove('active'));
-
-        const navItem = $(`.nav-item[data-page="${page}"]`);
-        const pageEl = $(`#page-${page}`);
-
-        if (navItem) navItem.classList.add('active');
-        if (pageEl) pageEl.classList.add('active');
-
-        // Close sidebar on mobile
-        $('.sidebar').classList.remove('open');
-
-        // Refresh data based on page
-        if (page === 'dashboard') updateDashboard();
-        if (page === 'channels') renderChannels();
-        if (page === 'addChannel') prepareAddForm();
-        if (page === 'exportM3U') updateExportGroupFilter();
-    }
-
-    // ===== MOBILE MENU =====
-    $('#menuToggle').addEventListener('click', () => {
-        $('.sidebar').classList.toggle('open');
-    });
-
-    // Close sidebar when clicking overlay on mobile
-    document.addEventListener('click', (e) => {
-        const sidebar = $('.sidebar');
-        const menuToggle = $('#menuToggle');
-        if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
-            if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-                sidebar.classList.remove('open');
-            }
-        }
-    });
-
-    // ===== THEME =====
-    function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        saveTheme(theme);
-        $$('.theme-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.theme === theme);
-        });
-    }
-
-    $$('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            applyTheme(btn.dataset.theme);
-            showToast('Tema değiştirildi.', 'success');
-        });
-    });
-
-    // ===== DASHBOARD =====
-    function updateDashboard() {
-        const channels = getChannels();
-        const groups = [...new Set(channels.map(c => c.group).filter(Boolean))];
-        const active = channels.filter(c => c.status === 'active');
-        const inactive = channels.filter(c => c.status === 'inactive');
-
-        $('#statTotal').textContent = channels.length;
-        $('#statGroups').textContent = groups.length;
-        $('#statActive').textContent = active.length;
-        $('#statInactive').textContent = inactive.length;
-
-        // Recent channels
-        const recent = [...channels].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 5);
-        const recentHtml = recent.length ? recent.map(ch => `
-            <div class="recent-item">
-                ${ch.logo
-                ? `<img src="${ch.logo}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="no-logo" style="display:none">${ch.name.charAt(0)}</span>`
-                : `<span class="no-logo">${ch.name.charAt(0)}</span>`}
-                <span class="recent-item-name">${escapeHtml(ch.name)}</span>
-                <span class="recent-item-group">${escapeHtml(ch.group || 'Grupsuz')}</span>
-            </div>
-        `).join('') : '<p style="color:var(--text-muted);font-size:14px;">Henüz kanal eklenmemiş.</p>';
-        $('#recentChannels').innerHTML = recentHtml;
-
-        // Group distribution
-        const groupCounts = {};
-        channels.forEach(ch => {
-            const g = ch.group || 'Grupsuz';
-            groupCounts[g] = (groupCounts[g] || 0) + 1;
-        });
-
-        const maxCount = Math.max(...Object.values(groupCounts), 1);
-        const groupHtml = Object.entries(groupCounts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `
-            <div class="group-bar">
-                <div class="group-bar-header">
-                    <span class="group-bar-name">${escapeHtml(name)}</span>
-                    <span class="group-bar-count">${count}</span>
-                </div>
-                <div class="group-bar-fill">
-                    <div class="group-bar-fill-inner" style="width:${(count / maxCount * 100)}%"></div>
-                </div>
-            </div>
-        `).join('');
-        $('#groupDistribution').innerHTML = groupHtml || '<p style="color:var(--text-muted);font-size:14px;">Veri yok.</p>';
-    }
-
-    // ===== CHANNEL LIST =====
-    let currentPage = 1;
-    const perPage = 15;
-    let selectedChannels = new Set();
-
-    function renderChannels() {
-        const channels = getChannels();
-        const searchTerm = ($('#searchChannel')?.value || '').toLowerCase();
-        const filterGroup = $('#filterGroup')?.value || '';
-        const filterStatus = $('#filterStatus')?.value || '';
-
-        let filtered = channels.filter(ch => {
-            const matchSearch = ch.name.toLowerCase().includes(searchTerm) ||
-                (ch.group || '').toLowerCase().includes(searchTerm) ||
-                ch.url.toLowerCase().includes(searchTerm);
-            const matchGroup = !filterGroup || ch.group === filterGroup;
-            const matchStatus = !filterStatus || ch.status === filterStatus;
-            return matchSearch && matchGroup && matchStatus;
-        });
-
-        // Sort by order, then name
-        filtered.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
-
-        const totalPages = Math.ceil(filtered.length / perPage) || 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-
-        const start = (currentPage - 1) * perPage;
-        const pageChannels = filtered.slice(start, start + perPage);
-
-        const listHtml = pageChannels.length ? pageChannels.map(ch => `
-            <div class="channel-card ${ch.status === 'inactive' ? 'inactive' : ''}" data-id="${ch.id}">
-                <input type="checkbox" class="channel-checkbox" 
-                    ${selectedChannels.has(ch.id) ? 'checked' : ''} 
-                    data-id="${ch.id}">
-                ${ch.logo
-                ? `<img src="${ch.logo}" alt="" class="channel-logo" onerror="this.outerHTML='<div class=\\'channel-logo-placeholder\\'>${ch.name.charAt(0)}</div>'">`
-                : `<div class="channel-logo-placeholder">${ch.name.charAt(0)}</div>`}
-                <div class="channel-info">
-                    <div class="channel-name">${escapeHtml(ch.name)}</div>
-                    <div class="channel-meta">
-                        ${ch.group ? `<span><i class="fas fa-layer-group"></i> ${escapeHtml(ch.group)}</span>` : ''}
-                        ${ch.epgId ? `<span><i class="fas fa-book"></i> ${escapeHtml(ch.epgId)}</span>` : ''}
-                        ${ch.order ? `<span><i class="fas fa-sort"></i> #${ch.order}</span>` : ''}
-                    </div>
-                    <div class="channel-url" title="${escapeHtml(ch.url)}">${escapeHtml(ch.url)}</div>
-                </div>
-                <span class="channel-status ${ch.status === 'active' ? 'status-active' : 'status-inactive'}">
-                    ${ch.status === 'active' ? 'Aktif' : 'Pasif'}
-                </span>
-                <div class="channel-actions">
-                    <button class="btn btn-xs btn-primary btn-edit" data-id="${ch.id}" title="Düzenle">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-xs btn-warning btn-toggle" data-id="${ch.id}" title="${ch.status === 'active' ? 'Pasif Yap' : 'Aktif Yap'}">
-                        <i class="fas fa-${ch.status === 'active' ? 'toggle-on' : 'toggle-off'}"></i>
-                    </button>
-                    <button class="btn btn-xs btn-danger btn-delete" data-id="${ch.id}" title="Sil">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('') : '<p style="text-align:center;color:var(--text-muted);padding:40px;">Kanal bulunamadı.</p>';
-
-        $('#channelsList').innerHTML = listHtml;
-
-        // Pagination
-        let pagHtml = '';
-        if (totalPages > 1) {
-            pagHtml += `<button ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}"><i class="fas fa-chevron-left"></i></button>`;
-
-            for (let i = 1; i <= totalPages; i++) {
-                if (totalPages <= 7 || i === 1 || i === totalPages || Math.abs(i - currentPage) <= 1) {
-                    pagHtml += `<button class="${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
-                } else if (Math.abs(i - currentPage) === 2) {
-                    pagHtml += `<button disabled>...</button>`;
-                }
-            }
-
-            pagHtml += `<button ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}"><i class="fas fa-chevron-right"></i></button>`;
-        }
-        $('#pagination').innerHTML = pagHtml;
-
-        // Bind events
-        bindChannelEvents();
-    }
-
-    function bindChannelEvents() {
-        // Checkboxes
-        $$('.channel-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => {
-                if (cb.checked) {
-                    selectedChannels.add(cb.dataset.id);
-                } else {
-                    selectedChannels.delete(cb.dataset.id);
-                }
-            });
-        });
-
-        // Edit buttons
-        $$('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', () => openEditModal(btn.dataset.id));
-        });
-
-        // Toggle buttons
-        $$('.btn-toggle').forEach(btn => {
-            btn.addEventListener('click', () => toggleChannel(btn.dataset.id));
-        });
-
-        // Delete buttons
-        $$('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', () => deleteChannel(btn.dataset.id));
-        });
-
-        // Pagination
-        $$('#pagination button:not([disabled])').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentPage = parseInt(btn.dataset.page);
-                renderChannels();
-            });
-        });
-    }
-
-    // Search & filter
-    $('#searchChannel')?.addEventListener('input', () => {
-        currentPage = 1;
-        renderChannels();
-    });
-
-    $('#filterGroup')?.addEventListener('change', () => {
-        currentPage = 1;
-        renderChannels();
-    });
-
-    $('#filterStatus')?.addEventListener('change', () => {
-        currentPage = 1;
-        renderChannels();
-    });
-
-    // Select all
-    $('#selectAllBtn')?.addEventListener('click', () => {
-        const channels = getChannels();
-        const allSelected = channels.length === selectedChannels.size;
-        if (allSelected) {
-            selectedChannels.clear();
-        } else {
-            channels.forEach(ch => selectedChannels.add(ch.id));
-        }
-        renderChannels();
-    });
-
-    // Delete selected
-    $('#deleteSelectedBtn')?.addEventListener('click', () => {
-        if (selectedChannels.size === 0) {
-            showToast('Lütfen silinecek kanalları seçin.', 'warning');
-            return;
-        }
-        if (confirm(`${selectedChannels.size} kanal silinecek. Emin misiniz?`)) {
-            let channels = getChannels();
-            channels = channels.filter(ch => !selectedChannels.has(ch.id));
-            saveChannels(channels);
-            selectedChannels.clear();
-            renderChannels();
-            updateGroupFilters();
-            showToast('Seçili kanallar silindi.', 'success');
-        }
-    });
-
-    // ===== CHANNEL CRUD =====
-    function toggleChannel(id) {
-        const channels = getChannels();
-        const ch = channels.find(c => c.id === id);
-        if (ch) {
-            ch.status = ch.status === 'active' ? 'inactive' : 'active';
-            saveChannels(channels);
-            renderChannels();
-            showToast(`${ch.name} ${ch.status === 'active' ? 'aktif' : 'pasif'} yapıldı.`, 'success');
-        }
-    }
-
-    function deleteChannel(id) {
-        const channels = getChannels();
-        const ch = channels.find(c => c.id === id);
-        if (ch && confirm(`"${ch.name}" kanalını silmek istediğinize emin misiniz?`)) {
-            const updated = channels.filter(c => c.id !== id);
-            saveChannels(updated);
-            selectedChannels.delete(id);
-            renderChannels();
-            updateGroupFilters();
-            showToast(`"${ch.name}" silindi.`, 'success');
-        }
-    }
-
-    // ===== ADD CHANNEL FORM =====
-    function prepareAddForm() {
-        $('#editChannelId').value = '';
-        $('#channelForm').reset();
-        $('#saveChannelBtn').innerHTML = '<i class="fas fa-save"></i> Kaydet';
-        $('#cancelEditBtn').style.display = 'none';
-        updateGroupDatalist();
-    }
-
-    function updateGroupDatalist() {
-        const channels = getChannels();
-        const groups = [...new Set(channels.map(c => c.group).filter(Boolean))];
-        const options = groups.map(g => `<option value="${g}">`).join('');
-        $('#groupList').innerHTML = options;
-        $('#editGroupList').innerHTML = options;
-    }
-
-    $('#channelForm')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const id = $('#editChannelId').value;
-        const channelData = {
-            id: id || generateId(),
-            name: $('#chName').value.trim(),
-            url: $('#chUrl').value.trim(),
-            group: $('#chGroup').value.trim(),
-            logo: $('#chLogo').value.trim(),
-            epgId: $('#chEpgId').value.trim(),
-            status: $('#chStatus').value,
-            order: parseInt($('#chOrder').value) || 0,
-            notes: $('#chNotes').value.trim(),
-            createdAt: id ? undefined : Date.now(),
-            updatedAt: Date.now()
-        };
-
-        const channels = getChannels();
-
-        if (id) {
-            const index = channels.findIndex(c => c.id === id);
-            if (index >= 0) {
-                channelData.createdAt = channels[index].createdAt;
-                channels[index] = channelData;
-            }
-            showToast(`"${channelData.name}" güncellendi.`, 'success');
-        } else {
-            channelData.createdAt = Date.now();
-            channels.push(channelData);
-            showToast(`"${channelData.name}" eklendi.`, 'success');
-        }
-
-        saveChannels(channels);
-        prepareAddForm();
-        updateGroupFilters();
-    });
-
-    $('#cancelEditBtn')?.addEventListener('click', () => {
-        prepareAddForm();
-    });
-
-    // ===== EDIT MODAL =====
-    function openEditModal(id) {
-        const channels = getChannels();
-        const ch = channels.find(c => c.id === id);
-        if (!ch) return;
-
-        updateGroupDatalist();
-
-        $('#editId').value = ch.id;
-        $('#editName').value = ch.name;
-        $('#editUrl').value = ch.url;
-        $('#editGroup').value = ch.group || '';
-        $('#editLogo').value = ch.logo || '';
-        $('#editEpgId').value = ch.epgId || '';
-        $('#editStatus').value = ch.status || 'active';
-        $('#editOrder').value = ch.order || 0;
-        $('#editNotes').value = ch.notes || '';
-
-        $('#editModal').classList.remove('hidden');
-    }
-
-    function closeEditModal() {
-        $('#editModal').classList.add('hidden');
-    }
-
-    $('#modalClose')?.addEventListener('click', closeEditModal);
-    $('#modalCancelBtn')?.addEventListener('click', closeEditModal);
-    $('.modal-overlay')?.addEventListener('click', closeEditModal);
-
-    $('#editForm')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const id = $('#editId').value;
-        const channels = getChannels();
-        const index = channels.findIndex(c => c.id === id);
-
-        if (index >= 0) {
-            channels[index] = {
-                ...channels[index],
-                name: $('#editName').value.trim(),
-                url: $('#editUrl').value.trim(),
-                group: $('#editGroup').value.trim(),
-                logo: $('#editLogo').value.trim(),
-                epgId: $('#editEpgId').value.trim(),
-                status: $('#editStatus').value,
-                order: parseInt($('#editOrder').value) || 0,
-                notes: $('#editNotes').value.trim(),
-                updatedAt: Date.now()
-            };
-
-            saveChannels(channels);
-            closeEditModal();
-            renderChannels();
-            updateGroupFilters();
-            showToast(`"${channels[index].name}" güncellendi.`, 'success');
-        }
-    });
-
-    // ===== GROUP FILTERS =====
-    function updateGroupFilters() {
-        const channels = getChannels();
-        const groups = [...new Set(channels.map(c => c.group).filter(Boolean))].sort();
-
-        const options = '<option value="">Tüm Gruplar</option>' +
-            groups.map(g => `<option value="${g}">${g}</option>`).join('');
-
-        if ($('#filterGroup')) $('#filterGroup').innerHTML = options;
-        if ($('#exportGroup')) $('#exportGroup').innerHTML = options;
-
-        updateGroupDatalist();
-    }
-
-    // ===== M3U PARSER =====
-    function parseM3U(content) {
-        const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
-        const channels = [];
-        let current = null;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            if (line.startsWith('#EXTINF')) {
-                current = {};
-
-                // Parse attributes
-                const tvgId = extractAttr(line, 'tvg-id');
-                const tvgName = extractAttr(line, 'tvg-name');
-                const tvgLogo = extractAttr(line, 'tvg-logo');
-                const groupTitle = extractAttr(line, 'group-title');
-
-                // Parse name (after the last comma)
-                const commaIdx = line.lastIndexOf(',');
-                const name = commaIdx >= 0 ? line.substring(commaIdx + 1).trim() : '';
-
-                current.name = tvgName || name || 'Bilinmeyen Kanal';
-                current.epgId = tvgId || '';
-                current.logo = tvgLogo || '';
-                current.group = groupTitle || '';
-
-            } else if (line.startsWith('#')) {
-                // skip other comments
-                continue;
-            } else if (current) {
-                // This is the URL line
-                current.url = line;
-                channels.push({ ...current });
-                current = null;
-            }
-        }
-
-        return channels;
-    }
-
-    function extractAttr(line, attr) {
-        // Match both single and double quotes
-        const regex = new RegExp(`${attr}="([^"]*)"`, 'i');
-        const match = line.match(regex);
-        if (match) return match[1];
+    return result;
+}
+
+function getAttr(line,attr){
+    const m=line.match(new RegExp(`${attr}="([^"]*)"`, 'i'));
+    return m?m[1]:'';
+}
+
+/* ===========================
+   IMPORT
+   =========================== */
+$$('.imp-tab').forEach(t=>t.addEventListener('click',()=>{
+    $$('.imp-tab').forEach(x=>x.classList.remove('active'));
+    $$('.imp-content').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');$(`#impTab-${t.dataset.tab}`).classList.add('active');
+}));
+
+function refreshImportCatSelect(){
+    const cats=DB.categories();
+    $('#importCategory').innerHTML='<option value="">Orijinal grup bilgisini kullan</option>'+cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+}
+
+// File
+const dz=$('#dropZone');const mf=$('#m3uFile');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])});
+mf.addEventListener('change',e=>{if(e.target.files[0])readFile(e.target.files[0])});
+
+function readFile(f){
+    const r=new FileReader();
+    r.onload=e=>{showPreview(parseM3U(e.target.result))};
+    r.readAsText(f);
+}
+
+// Text
+$('#parseTextBtn').addEventListener('click',()=>{
+    const t=$('#m3uText').value.trim();
+    if(!t)return toast('İçerik yapıştırın','w');
+    showPreview(parseM3U(t));
+});
+
+// URL
+$('#fetchUrlBtn').addEventListener('click',async()=>{
+    const url=$('#m3uUrl').value.trim();
+    if(!url)return toast('URL girin','w');
+    try{toast('İndiriliyor...','i');const r=await fetch(url);const t=await r.text();showPreview(parseM3U(t))}
+    catch(e){toast('İndirilemedi (CORS hatası olabilir)','e')}
+});
+
+let parsedList=[];
+
+function showPreview(list){
+    parsedList=list;
+    if(!list.length){toast('Kanal bulunamadı','w');$('#importPreview').classList.add('hidden');return}
+    $('#importPreview').classList.remove('hidden');
+    $('#previewCount').textContent=list.length;
+    $('#previewList').innerHTML=list.map((c,i)=>`
+        <div class="pv-item">
+            <input type="checkbox" checked data-i="${i}" class="pv-cb">
+            <span class="pv-name">${esc(c.name)}</span>
+            ${c.group?`<span class="pv-group">${esc(c.group)}</span>`:''}
+        </div>
+    `).join('');
+    toast(`${list.length} kanal bulundu`,'s');
+}
+
+$('#impSelectAll').addEventListener('click',()=>$$('.pv-cb').forEach(c=>c.checked=true));
+$('#impDeselectAll').addEventListener('click',()=>$$('.pv-cb').forEach(c=>c.checked=false));
+
+$('#impImportBtn').addEventListener('click',()=>{
+    const idxs=[];$$('.pv-cb').forEach(cb=>{if(cb.checked)idxs.push(parseInt(cb.dataset.i))});
+    if(!idxs.length)return toast('En az bir kanal seçin','w');
+
+    const overrideCat=$('#importCategory').value;
+    const channels=DB.channels();
+    const cats=DB.categories();
+    let added=0;
+    const newCats=new Set(cats.map(c=>c.name.toLowerCase()));
+
+    idxs.forEach(i=>{
+        const c=parsedList[i];if(!c)return;
+        const category=overrideCat||c.group||'';
         
-        const regex2 = new RegExp(`${attr}='([^']*)'`, 'i');
-        const match2 = line.match(regex2);
-        return match2 ? match2[1] : '';
-    }
+        // Auto-create category if doesn't exist
+        if(category&&!newCats.has(category.toLowerCase())){
+            cats.push({id:uid(),name:category,icon:'fas fa-folder',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')});
+            newCats.add(category.toLowerCase());
+        }
 
-    // ===== IMPORT M3U =====
-    // Tabs
-    $$('.import-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            $$('.import-tab').forEach(t => t.classList.remove('active'));
-            $$('.import-tab-content').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            $(`#importTab-${tab.dataset.tab}`).classList.add('active');
+        channels.push({
+            id:uid(),name:c.name,url:c.url,category,
+            logo:c.logo||'',epgId:c.epgId||'',
+            status:'active',order:0,
+            createdAt:Date.now(),updatedAt:Date.now()
         });
+        added++;
     });
 
-    // File upload
-    const dropZone = $('#dropZone');
-    const m3uFile = $('#m3uFile');
+    DB.saveChannels(channels);DB.saveCats(cats);
+    $('#importPreview').classList.add('hidden');parsedList=[];
+    $('#totalBadgeCount').textContent=channels.length;
+    toast(`${added} kanal içe aktarıldı!`,'s');
+});
 
-    dropZone?.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
+/* ===========================
+   EXPORT M3U
+   =========================== */
+function refreshExportFilters(){
+    const cats=DB.categories();
+    $('#expCat').innerHTML='<option value="">Tümü</option>'+cats.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+}
+
+$('#genM3UBtn').addEventListener('click',()=>{
+    const ch=DB.channels();
+    const fc=$('#expCat').value;
+    const fs=$('#expStatus').value;
+
+    let list=ch.filter(c=>{
+        const mc=!fc||c.category===fc;
+        const ms=!fs||c.status===fs;
+        return mc&&ms;
+    });
+    list.sort((a,b)=>(a.order||0)-(b.order||0)||a.name.localeCompare(b.name));
+
+    let m3u='#EXTM3U\n';
+    list.forEach(c=>{
+        let ext='#EXTINF:-1';
+        if(c.epgId)ext+=` tvg-id="${c.epgId}"`;
+        ext+=` tvg-name="${c.name}"`;
+        if(c.logo)ext+=` tvg-logo="${c.logo}"`;
+        if(c.category)ext+=` group-title="${c.category}"`;
+        ext+=`,${c.name}`;
+        m3u+=ext+'\n'+c.url+'\n';
     });
 
-    dropZone?.addEventListener('dragleave', () => {
-        dropZone.classList.remove('dragover');
-    });
+    $('#m3uOutput').value=m3u;
+    $('#dlM3UBtn').classList.remove('hidden');
+    $('#copyM3UBtn').classList.remove('hidden');
+    $('#expStats').classList.remove('hidden');
+    $('#expStats').innerHTML=`
+        <span><i class="fas fa-tv"></i> ${list.length} kanal</span>
+        <span><i class="fas fa-folder"></i> ${[...new Set(list.map(c=>c.category).filter(Boolean))].length} kategori</span>
+        <span><i class="fas fa-file"></i> ${(new Blob([m3u]).size/1024).toFixed(1)} KB</span>
+    `;
+    toast(`${list.length} kanallık M3U oluşturuldu`,'s');
+});
 
-    dropZone?.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) handleM3UFile(file);
-    });
+$('#dlM3UBtn').addEventListener('click',()=>{
+    const content=$('#m3uOutput').value;if(!content)return;
+    const fname=($('#expFilename').value.trim()||'playlist')+'.m3u';
+    const blob=new Blob([content],{type:'application/x-mpegURL'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+    URL.revokeObjectURL(url);
+    toast(`${fname} indirildi`,'s');
+});
 
-    m3uFile?.addEventListener('change', (e) => {
-        if (e.target.files[0]) handleM3UFile(e.target.files[0]);
-    });
+$('#copyM3UBtn').addEventListener('click',()=>{
+    const c=$('#m3uOutput').value;if(!c)return;
+    navigator.clipboard.writeText(c).then(()=>toast('Panoya kopyalandı','s')).catch(()=>{
+        $('#m3uOutput').select();document.execCommand('copy');toast('Panoya kopyalandı','s')});
+});
 
-    function handleM3UFile(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const content = e.target.result;
-            const parsed = parseM3U(content);
-            showImportPreview(parsed);
-        };
-        reader.readAsText(file);
-    }
+/* ===========================
+   SETTINGS
+   =========================== */
+$('#exportBackup').addEventListener('click',()=>{
+    const data={channels:DB.channels(),categories:DB.categories(),theme:DB.theme(),date:new Date().toISOString()};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=`iptv-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();
+    URL.revokeObjectURL(url);toast('Yedek indirildi','s');
+});
 
-    // Text paste
-    $('#parseTextBtn')?.addEventListener('click', () => {
-        const text = $('#m3uText').value.trim();
-        if (!text) {
-            showToast('Lütfen M3U içeriği yapıştırın.', 'warning');
-            return;
-        }
-        const parsed = parseM3U(text);
-        showImportPreview(parsed);
-    });
+$('#importBackup').addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+        try{
+            const d=JSON.parse(ev.target.result);
+            if(!confirm(`${d.channels?.length||0} kanal ve ${d.categories?.length||0} kategori yüklenecek. Mevcut veriler silinecek. Devam?`))return;
+            if(d.channels)DB.saveChannels(d.channels);
+            if(d.categories)DB.saveCats(d.categories);
+            if(d.theme)applyTheme(d.theme);
+            refreshDashboard();
+            toast('Yedek yüklendi!','s');
+        }catch(err){toast('Geçersiz dosya','e')}
+    };
+    r.readAsText(f);e.target.value='';
+});
 
-    // URL fetch
-    $('#fetchUrlBtn')?.addEventListener('click', async () => {
-        const url = $('#m3uUrl').value.trim();
-        if (!url) {
-            showToast('Lütfen bir URL girin.', 'warning');
-            return;
-        }
+$('#clearAllData').addEventListener('click',()=>{
+    if(!confirm('TÜM VERİLER silinecek. Emin misiniz?'))return;
+    if(!confirm('Bu işlem geri alınamaz! Devam?'))return;
+    localStorage.removeItem('iptv_ch');localStorage.removeItem('iptv_cats');
+    refreshDashboard();toast('Tüm veriler silindi','s');
+    $('#totalBadgeCount').textContent='0';
+});
 
-        try {
-            showToast('İndiriliyor...', 'info');
-            const response = await fetch(url);
-            const text = await response.text();
-            const parsed = parseM3U(text);
-            showImportPreview(parsed);
-        } catch (err) {
-            showToast('URL\'den indirilemedi. CORS hatası olabilir.', 'error');
-        }
-    });
-
-    let parsedChannels = [];
-
-    function showImportPreview(channels) {
-        parsedChannels = channels;
-        const preview = $('#importPreview');
-
-        if (channels.length === 0) {
-            showToast('Hiç kanal bulunamadı. M3U formatını kontrol edin.', 'warning');
-            preview.classList.add('hidden');
-            return;
-        }
-
-        preview.classList.remove('hidden');
-        $('#previewCount').textContent = channels.length;
-
-        const html = channels.map((ch, i) => `
-            <div class="preview-item">
-                <input type="checkbox" checked data-index="${i}" class="preview-checkbox">
-                <span class="preview-item-name">${escapeHtml(ch.name)}</span>
-                ${ch.group ? `<span class="preview-item-group">${escapeHtml(ch.group)}</span>` : ''}
-            </div>
-        `).join('');
-
-        $('#previewList').innerHTML = html;
-        showToast(`${channels.length} kanal bulundu.`, 'success');
-    }
-
-    $('#importSelectAll')?.addEventListener('click', () => {
-        $$('.preview-checkbox').forEach(cb => cb.checked = true);
-    });
-
-    $('#importDeselectAll')?.addEventListener('click', () => {
-        $$('.preview-checkbox').forEach(cb => cb.checked = false);
-    });
-
-    $('#importSelectedBtn')?.addEventListener('click', () => {
-        const selected = [];
-        $$('.preview-checkbox').forEach(cb => {
-            if (cb.checked) {
-                selected.push(parseInt(cb.dataset.index));
-            }
-        });
-
-        if (selected.length === 0) {
-            showToast('Lütfen en az bir kanal seçin.', 'warning');
-            return;
-        }
-
-        const channels = getChannels();
-        let addedCount = 0;
-
-        selected.forEach(idx => {
-            const ch = parsedChannels[idx];
-            if (ch) {
-                channels.push({
-                    id: generateId(),
-                    name: ch.name,
-                    url: ch.url,
-                    group: ch.group || '',
-                    logo: ch.logo || '',
-                    epgId: ch.epgId || '',
-                    status: 'active',
-                    order: 0,
-                    notes: '',
-                    createdAt: Date.now(),
-                    updatedAt: Date.now()
-                });
-                addedCount++;
-            }
-        });
-
-        saveChannels(channels);
-        updateGroupFilters();
-        $('#importPreview').classList.add('hidden');
-        parsedChannels = [];
-
-        showToast(`${addedCount} kanal başarıyla eklendi!`, 'success');
-    });
-
-    // ===== EXPORT M3U =====
-    function updateExportGroupFilter() {
-        updateGroupFilters();
-    }
-
-    $('#generateM3U')?.addEventListener('click', () => {
-        const channels = getChannels();
-        const filterGroup = $('#exportGroup').value;
-        const filterStatus = $('#exportStatus').value;
-
-        let filtered = channels.filter(ch => {
-            const matchGroup = !filterGroup || ch.group === filterGroup;
-            const matchStatus = !filterStatus || ch.status === filterStatus;
-            return matchGroup && matchStatus;
-        });
-
-        filtered.sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
-
-        let m3u = '#EXTM3U\n';
-
-        filtered.forEach(ch => {
-            let extinf = '#EXTINF:-1';
-            if (ch.epgId) extinf += ` tvg-id="${ch.epgId}"`;
-            extinf += ` tvg-name="${ch.name}"`;
-            if (ch.logo) extinf += ` tvg-logo="${ch.logo}"`;
-            if (ch.group) extinf += ` group-title="${ch.group}"`;
-            extinf += `,${ch.name}`;
-
-            m3u += extinf + '\n';
-            m3u += ch.url + '\n';
-        });
-
-        $('#m3uOutput').value = m3u;
-        $('#downloadM3U').style.display = 'inline-flex';
-        $('#copyM3U').style.display = 'inline-flex';
-
-        showToast(`${filtered.length} kanal ile M3U oluşturuldu.`, 'success');
-    });
-
-    $('#downloadM3U')?.addEventListener('click', () => {
-        const content = $('#m3uOutput').value;
-        if (!content) return;
-
-        const blob = new Blob([content], { type: 'application/x-mpegURL' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'playlist.m3u';
-        a.click();
-        URL.revokeObjectURL(url);
-
-        showToast('M3U dosyası indirildi.', 'success');
-    });
-
-    $('#copyM3U')?.addEventListener('click', () => {
-        const content = $('#m3uOutput').value;
-        if (!content) return;
-
-        navigator.clipboard.writeText(content).then(() => {
-            showToast('M3U içeriği panoya kopyalandı.', 'success');
-        }).catch(() => {
-            // Fallback
-            $('#m3uOutput').select();
-            document.execCommand('copy');
-            showToast('M3U içeriği panoya kopyalandı.', 'success');
-        });
-    });
-
-    // ===== SETTINGS =====
-    // Change password
-    $('#changePasswordForm')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const user = getUser();
-        const current = $('#currentPassword').value;
-        const newPass = $('#newPassword').value;
-        const confirm = $('#confirmPassword').value;
-
-        if (current !== user.password) {
-            showToast('Mevcut şifre hatalı!', 'error');
-            return;
-        }
-
-        if (newPass !== confirm) {
-            showToast('Yeni şifreler eşleşmiyor!', 'error');
-            return;
-        }
-
-        if (newPass.length < 4) {
-            showToast('Şifre en az 4 karakter olmalı!', 'error');
-            return;
-        }
-
-        user.password = newPass;
-        saveUser(user);
-        $('#changePasswordForm').reset();
-        showToast('Şifre başarıyla güncellendi.', 'success');
-    });
-
-    // Change username
-    $('#changeUsernameForm')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const user = getUser();
-        const newUsername = $('#newUsername').value.trim();
-        const verifyPass = $('#verifyPassword').value;
-
-        if (verifyPass !== user.password) {
-            showToast('Şifre hatalı!', 'error');
-            return;
-        }
-
-        if (newUsername.length < 3) {
-            showToast('Kullanıcı adı en az 3 karakter olmalı!', 'error');
-            return;
-        }
-
-        user.username = newUsername;
-        saveUser(user);
-        $('#currentUser').textContent = newUsername;
-        $('#changeUsernameForm').reset();
-        showToast('Kullanıcı adı güncellendi.', 'success');
-    });
-
-    // Delete all channels
-    $('#deleteAllChannels')?.addEventListener('click', () => {
-        if (confirm('TÜM KANALLARI silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) {
-            if (confirm('Bu işlem geri alınamaz! Devam etmek istiyor musunuz?')) {
-                saveChannels([]);
-                selectedChannels.clear();
-                updateGroupFilters();
-                updateDashboard();
-                showToast('Tüm kanallar silindi.', 'success');
-            }
-        }
-    });
-
-    // Reset app
-    $('#resetApp')?.addEventListener('click', () => {
-        if (confirm('Uygulama tamamen sıfırlanacak. Tüm veriler silinecek. Emin misiniz?')) {
-            localStorage.removeItem('iptv_channels');
-            localStorage.removeItem('iptv_user');
-            localStorage.removeItem('iptv_theme');
-            sessionStorage.removeItem('iptv_logged_in');
-            location.reload();
-        }
-    });
-
-    // Export backup
-    $('#exportBackup')?.addEventListener('click', () => {
-        const data = {
-            channels: getChannels(),
-            user: getUser(),
-            theme: getTheme(),
-            exportDate: new Date().toISOString()
-        };
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `iptv-backup-${new Date().toISOString().slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        showToast('Yedek dosyası indirildi.', 'success');
-    });
-
-    // Import backup
-    $('#importBackup')?.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const data = JSON.parse(event.target.result);
-
-                if (confirm(`Yedek dosyasında ${data.channels?.length || 0} kanal bulundu. Mevcut veriler üzerine yazılacak. Devam?`)) {
-                    if (data.channels) saveChannels(data.channels);
-                    if (data.user) saveUser(data.user);
-                    if (data.theme) applyTheme(data.theme);
-
-                    updateGroupFilters();
-                    updateDashboard();
-                    showToast('Yedek başarıyla yüklendi!', 'success');
-                }
-            } catch (err) {
-                showToast('Geçersiz yedek dosyası!', 'error');
-            }
-        };
-        reader.readAsText(file);
-        e.target.value = '';
-    });
-
-    // ===== HELPERS =====
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // ===== INIT =====
-    function init() {
-        applyTheme(getTheme());
-        checkSession();
-    }
-
-    init();
+/* ===========================
+   INIT
+   =========================== */
+applyTheme(DB.theme());
+refreshDashboard();
+$('#totalBadgeCount').textContent=DB.channels().length;
 
 })();
