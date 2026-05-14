@@ -9,479 +9,383 @@
 </head>
 <body>
 
-    <!-- LOGIN SCREEN -->
-    <div id="loginScreen" class="login-screen">
-        <div class="login-box">
-            <div class="login-icon">
-                <i class="fas fa-satellite-dish"></i>
-            </div>
-            <h1>IPTV Panel</h1>
-            <p class="login-subtitle">Yönetim Paneline Giriş Yapın</p>
-            <form id="loginForm">
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="username" placeholder="Kullanıcı Adı" autocomplete="off">
-                </div>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Şifre">
-                </div>
-                <button type="submit" class="btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Giriş Yap
-                </button>
-                <p id="loginError" class="login-error"></p>
-            </form>
-            <div class="default-credentials">
-                <p><i class="fas fa-info-circle"></i> Varsayılan: admin / admin123</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- MAIN PANEL -->
-    <div id="mainPanel" class="main-panel hidden">
+    <div class="app">
         <!-- SIDEBAR -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <i class="fas fa-satellite-dish"></i>
                 <span>IPTV Panel</span>
+                <button class="sidebar-close" id="sidebarClose"><i class="fas fa-times"></i></button>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-page="dashboard">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
+                    <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
                 </a>
                 <a href="#" class="nav-item" data-page="channels">
-                    <i class="fas fa-tv"></i>
-                    <span>Kanallar</span>
+                    <i class="fas fa-tv"></i><span>Kanallar</span>
                 </a>
                 <a href="#" class="nav-item" data-page="addChannel">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Kanal Ekle</span>
+                    <i class="fas fa-plus-circle"></i><span>Kanal Ekle</span>
+                </a>
+                <a href="#" class="nav-item" data-page="categories">
+                    <i class="fas fa-folder-plus"></i><span>Kategoriler</span>
                 </a>
                 <a href="#" class="nav-item" data-page="importM3U">
-                    <i class="fas fa-file-import"></i>
-                    <span>M3U İçe Aktar</span>
+                    <i class="fas fa-file-import"></i><span>M3U İçe Aktar</span>
                 </a>
                 <a href="#" class="nav-item" data-page="exportM3U">
-                    <i class="fas fa-file-export"></i>
-                    <span>M3U Dışa Aktar</span>
+                    <i class="fas fa-file-export"></i><span>M3U İndir</span>
                 </a>
                 <a href="#" class="nav-item" data-page="settings">
-                    <i class="fas fa-cog"></i>
-                    <span>Ayarlar</span>
+                    <i class="fas fa-cog"></i><span>Ayarlar</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
-                <button id="logoutBtn" class="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Çıkış Yap</span>
-                </button>
+                <div class="theme-switch">
+                    <button class="theme-btn active" data-theme="dark" title="Koyu"><i class="fas fa-moon"></i></button>
+                    <button class="theme-btn" data-theme="light" title="Açık"><i class="fas fa-sun"></i></button>
+                    <button class="theme-btn" data-theme="blue" title="Mavi"><i class="fas fa-tint"></i></button>
+                </div>
             </div>
         </aside>
 
-        <!-- CONTENT -->
-        <main class="content">
-            <!-- TOP BAR -->
+        <!-- MAIN -->
+        <main class="main">
             <header class="topbar">
-                <button id="menuToggle" class="menu-toggle">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                <h2 class="topbar-title" id="topbarTitle">Dashboard</h2>
                 <div class="topbar-right">
-                    <span class="welcome-text">
-                        <i class="fas fa-user-circle"></i>
-                        Hoşgeldin, <strong id="currentUser">Admin</strong>
+                    <span class="channel-count-badge" id="totalBadge">
+                        <i class="fas fa-tv"></i> <span id="totalBadgeCount">0</span> Kanal
                     </span>
                 </div>
             </header>
 
-            <!-- PAGES -->
+            <div class="content">
 
-            <!-- DASHBOARD -->
-            <section id="page-dashboard" class="page active">
-                <h2 class="page-title"><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
-                <div class="stats-grid">
-                    <div class="stat-card stat-total">
-                        <div class="stat-icon"><i class="fas fa-tv"></i></div>
-                        <div class="stat-info">
-                            <h3 id="statTotal">0</h3>
-                            <p>Toplam Kanal</p>
+                <!-- ========== DASHBOARD ========== -->
+                <section id="page-dashboard" class="page active">
+                    <div class="stats-grid">
+                        <div class="stat-card c1">
+                            <div class="stat-icon"><i class="fas fa-tv"></i></div>
+                            <div class="stat-info"><h3 id="statTotal">0</h3><p>Toplam Kanal</p></div>
+                        </div>
+                        <div class="stat-card c2">
+                            <div class="stat-icon"><i class="fas fa-folder"></i></div>
+                            <div class="stat-info"><h3 id="statCats">0</h3><p>Kategori</p></div>
+                        </div>
+                        <div class="stat-card c3">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-info"><h3 id="statActive">0</h3><p>Aktif</p></div>
+                        </div>
+                        <div class="stat-card c4">
+                            <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                            <div class="stat-info"><h3 id="statInactive">0</h3><p>Pasif</p></div>
                         </div>
                     </div>
-                    <div class="stat-card stat-groups">
-                        <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
-                        <div class="stat-info">
-                            <h3 id="statGroups">0</h3>
-                            <p>Grup Sayısı</p>
+
+                    <div class="dash-grid">
+                        <div class="dash-card">
+                            <h3><i class="fas fa-clock"></i> Son Eklenenler</h3>
+                            <div id="recentList"></div>
+                        </div>
+                        <div class="dash-card">
+                            <h3><i class="fas fa-chart-bar"></i> Kategori Dağılımı</h3>
+                            <div id="catChart"></div>
                         </div>
                     </div>
-                    <div class="stat-card stat-active">
-                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                        <div class="stat-info">
-                            <h3 id="statActive">0</h3>
-                            <p>Aktif Kanal</p>
+
+                    <div class="dash-card quick-actions-card">
+                        <h3><i class="fas fa-bolt"></i> Hızlı İşlemler</h3>
+                        <div class="quick-actions">
+                            <button class="qa-btn" data-go="addChannel"><i class="fas fa-plus"></i>Kanal Ekle</button>
+                            <button class="qa-btn" data-go="categories"><i class="fas fa-folder-plus"></i>Kategori Ekle</button>
+                            <button class="qa-btn" data-go="importM3U"><i class="fas fa-file-import"></i>M3U İçe Aktar</button>
+                            <button class="qa-btn" data-go="exportM3U"><i class="fas fa-download"></i>M3U İndir</button>
                         </div>
                     </div>
-                    <div class="stat-card stat-inactive">
-                        <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                        <div class="stat-info">
-                            <h3 id="statInactive">0</h3>
-                            <p>Pasif Kanal</p>
+                </section>
+
+                <!-- ========== CHANNELS ========== -->
+                <section id="page-channels" class="page">
+                    <div class="toolbar">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchInput" placeholder="Kanal ara...">
                         </div>
-                    </div>
-                </div>
-
-                <div class="dashboard-section">
-                    <h3><i class="fas fa-clock"></i> Son Eklenen Kanallar</h3>
-                    <div id="recentChannels" class="recent-channels"></div>
-                </div>
-
-                <div class="dashboard-section">
-                    <h3><i class="fas fa-chart-pie"></i> Grup Dağılımı</h3>
-                    <div id="groupDistribution" class="group-distribution"></div>
-                </div>
-            </section>
-
-            <!-- CHANNELS LIST -->
-            <section id="page-channels" class="page">
-                <h2 class="page-title"><i class="fas fa-tv"></i> Kanal Listesi</h2>
-                <div class="channels-toolbar">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchChannel" placeholder="Kanal ara...">
-                    </div>
-                    <div class="filter-box">
-                        <select id="filterGroup">
-                            <option value="">Tüm Gruplar</option>
+                        <select id="filterCat" class="select-input">
+                            <option value="">Tüm Kategoriler</option>
                         </select>
-                        <select id="filterStatus">
+                        <select id="filterStatus" class="select-input">
                             <option value="">Tüm Durumlar</option>
                             <option value="active">Aktif</option>
                             <option value="inactive">Pasif</option>
                         </select>
+                        <div class="toolbar-actions">
+                            <button class="btn btn-sm btn-outline" id="selectAllBtn">
+                                <i class="fas fa-check-double"></i> Tümü
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="deleteSelBtn">
+                                <i class="fas fa-trash"></i> Sil
+                            </button>
+                        </div>
                     </div>
-                    <div class="bulk-actions">
-                        <button id="selectAllBtn" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-check-double"></i> Tümünü Seç
-                        </button>
-                        <button id="deleteSelectedBtn" class="btn btn-sm btn-danger">
-                            <i class="fas fa-trash"></i> Seçilenleri Sil
-                        </button>
-                    </div>
-                </div>
-                <div id="channelsList" class="channels-list"></div>
-                <div id="pagination" class="pagination"></div>
-            </section>
+                    <div id="channelList" class="channel-list"></div>
+                    <div id="paginationBar" class="pagination"></div>
+                </section>
 
-            <!-- ADD CHANNEL -->
-            <section id="page-addChannel" class="page">
-                <h2 class="page-title"><i class="fas fa-plus-circle"></i> Kanal Ekle</h2>
-                <form id="channelForm" class="channel-form">
-                    <input type="hidden" id="editChannelId">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label><i class="fas fa-tag"></i> Kanal Adı *</label>
-                            <input type="text" id="chName" required placeholder="Örn: TRT 1 HD">
+                <!-- ========== ADD CHANNEL ========== -->
+                <section id="page-addChannel" class="page">
+                    <form id="channelForm" class="form-card">
+                        <input type="hidden" id="chEditId">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label><i class="fas fa-tag"></i> Kanal Adı *</label>
+                                <input type="text" id="chName" required placeholder="Örn: TRT 1 HD">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-folder"></i> Kategori</label>
+                                <select id="chCategory" class="select-input">
+                                    <option value="">Kategori Seçin</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label><i class="fas fa-layer-group"></i> Grup</label>
-                            <input type="text" id="chGroup" placeholder="Örn: Türkiye" list="groupList">
-                            <datalist id="groupList"></datalist>
+                            <label><i class="fas fa-link"></i> Stream URL *</label>
+                            <input type="url" id="chUrl" required placeholder="http://example.com/stream.m3u8">
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label><i class="fas fa-image"></i> Logo URL</label>
+                                <input type="url" id="chLogo" placeholder="http://example.com/logo.png">
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-book"></i> EPG ID</label>
+                                <input type="text" id="chEpg" placeholder="trt1.tr">
+                            </div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label><i class="fas fa-toggle-on"></i> Durum</label>
+                                <select id="chStatus" class="select-input">
+                                    <option value="active">Aktif</option>
+                                    <option value="inactive">Pasif</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-sort-numeric-up"></i> Sıra</label>
+                                <input type="number" id="chOrder" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" id="chSaveBtn">
+                                <i class="fas fa-save"></i> Kaydet
+                            </button>
+                            <button type="button" class="btn btn-outline" id="chCancelBtn" style="display:none">
+                                <i class="fas fa-times"></i> İptal
+                            </button>
+                            <button type="reset" class="btn btn-ghost">
+                                <i class="fas fa-eraser"></i> Temizle
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- ========== CATEGORIES ========== -->
+                <section id="page-categories" class="page">
+                    <div class="form-card" style="margin-bottom:24px">
+                        <h3 style="margin-bottom:16px"><i class="fas fa-plus"></i> Yeni Kategori Ekle</h3>
+                        <form id="catForm" class="cat-form-row">
+                            <input type="hidden" id="catEditId">
+                            <input type="text" id="catName" required placeholder="Kategori adı (örn: Spor)" class="input-full">
+                            <input type="text" id="catIcon" placeholder="İkon (örn: fas fa-futbol)" class="input-med" title="Font Awesome ikon sınıfı">
+                            <input type="color" id="catColor" value="#1da1f2" class="input-color" title="Kategori rengi">
+                            <button type="submit" class="btn btn-primary" id="catSaveBtn"><i class="fas fa-plus"></i> Ekle</button>
+                            <button type="button" class="btn btn-outline" id="catCancelBtn" style="display:none"><i class="fas fa-times"></i></button>
+                        </form>
+                    </div>
+
+                    <div id="catList" class="cat-grid"></div>
+
+                    <div class="form-card" style="margin-top:24px">
+                        <h3 style="margin-bottom:12px"><i class="fas fa-lightbulb"></i> Popüler İkon Örnekleri</h3>
+                        <div class="icon-hints">
+                            <span class="icon-hint" data-icon="fas fa-futbol"><i class="fas fa-futbol"></i> fas fa-futbol</span>
+                            <span class="icon-hint" data-icon="fas fa-film"><i class="fas fa-film"></i> fas fa-film</span>
+                            <span class="icon-hint" data-icon="fas fa-music"><i class="fas fa-music"></i> fas fa-music</span>
+                            <span class="icon-hint" data-icon="fas fa-newspaper"><i class="fas fa-newspaper"></i> fas fa-newspaper</span>
+                            <span class="icon-hint" data-icon="fas fa-child"><i class="fas fa-child"></i> fas fa-child</span>
+                            <span class="icon-hint" data-icon="fas fa-globe"><i class="fas fa-globe"></i> fas fa-globe</span>
+                            <span class="icon-hint" data-icon="fas fa-star"><i class="fas fa-star"></i> fas fa-star</span>
+                            <span class="icon-hint" data-icon="fas fa-heart"><i class="fas fa-heart"></i> fas fa-heart</span>
+                            <span class="icon-hint" data-icon="fas fa-flag"><i class="fas fa-flag"></i> fas fa-flag</span>
+                            <span class="icon-hint" data-icon="fas fa-broadcast-tower"><i class="fas fa-broadcast-tower"></i> fas fa-broadcast-tower</span>
+                            <span class="icon-hint" data-icon="fas fa-theater-masks"><i class="fas fa-theater-masks"></i> fas fa-theater-masks</span>
+                            <span class="icon-hint" data-icon="fas fa-book"><i class="fas fa-book"></i> fas fa-book</span>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-link"></i> M3U8 / Stream URL *</label>
-                        <input type="url" id="chUrl" required placeholder="http://example.com/stream.m3u8">
+                </section>
+
+                <!-- ========== IMPORT M3U ========== -->
+                <section id="page-importM3U" class="page">
+                    <div class="import-tabs">
+                        <button class="imp-tab active" data-tab="file"><i class="fas fa-file-upload"></i><span>Dosya</span></button>
+                        <button class="imp-tab" data-tab="text"><i class="fas fa-paste"></i><span>Yapıştır</span></button>
+                        <button class="imp-tab" data-tab="url"><i class="fas fa-globe"></i><span>URL</span></button>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label><i class="fas fa-image"></i> Logo URL</label>
-                            <input type="url" id="chLogo" placeholder="http://example.com/logo.png">
-                        </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-book"></i> EPG ID</label>
-                            <input type="text" id="chEpgId" placeholder="Örn: trt1.tr">
+
+                    <div id="impTab-file" class="imp-content active">
+                        <div class="drop-zone" id="dropZone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>M3U dosyasını sürükleyin veya tıklayın</p>
+                            <label class="btn btn-primary">
+                                <i class="fas fa-folder-open"></i> Dosya Seç
+                                <input type="file" id="m3uFile" accept=".m3u,.m3u8,.txt" hidden>
+                            </label>
                         </div>
                     </div>
-                    <div class="form-row">
+
+                    <div id="impTab-text" class="imp-content">
                         <div class="form-group">
-                            <label><i class="fas fa-toggle-on"></i> Durum</label>
-                            <select id="chStatus">
-                                <option value="active">Aktif</option>
-                                <option value="inactive">Pasif</option>
+                            <label>M3U İçeriğini Yapıştırın</label>
+                            <textarea id="m3uText" rows="10" placeholder="#EXTM3U&#10;#EXTINF:-1 group-title=&quot;Spor&quot;,beIN Sports 1&#10;http://example.com/stream1"></textarea>
+                        </div>
+                        <button class="btn btn-primary" id="parseTextBtn"><i class="fas fa-cogs"></i> Analiz Et</button>
+                    </div>
+
+                    <div id="impTab-url" class="imp-content">
+                        <div class="form-group">
+                            <label>M3U URL</label>
+                            <input type="url" id="m3uUrl" placeholder="http://example.com/playlist.m3u">
+                        </div>
+                        <button class="btn btn-primary" id="fetchUrlBtn"><i class="fas fa-download"></i> İndir</button>
+                        <p class="hint"><i class="fas fa-info-circle"></i> CORS kısıtlaması olan URL'ler çalışmayabilir.</p>
+                    </div>
+
+                    <div class="form-card" style="margin-top:20px">
+                        <div class="form-group">
+                            <label><i class="fas fa-folder"></i> İçe aktarılan kanalların kategorisi</label>
+                            <select id="importCategory" class="select-input">
+                                <option value="">Orijinal grup bilgisini kullan</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div id="importPreview" class="form-card hidden" style="margin-top:20px">
+                        <div class="preview-header">
+                            <h3><i class="fas fa-list"></i> Bulunan: <span id="previewCount">0</span> kanal</h3>
+                            <div class="preview-actions">
+                                <button class="btn btn-sm btn-outline" id="impSelectAll"><i class="fas fa-check-double"></i> Tümü</button>
+                                <button class="btn btn-sm btn-outline" id="impDeselectAll"><i class="fas fa-square"></i> Hiçbiri</button>
+                                <button class="btn btn-sm btn-success" id="impImportBtn"><i class="fas fa-file-import"></i> İçe Aktar</button>
+                            </div>
+                        </div>
+                        <div id="previewList" class="preview-list"></div>
+                    </div>
+                </section>
+
+                <!-- ========== EXPORT M3U ========== -->
+                <section id="page-exportM3U" class="page">
+                    <div class="form-card">
+                        <h3 style="margin-bottom:20px"><i class="fas fa-download"></i> M3U Listesi İndir</h3>
+                        
+                        <div class="export-filters">
+                            <div class="form-group">
+                                <label>Kategori</label>
+                                <select id="expCat" class="select-input">
+                                    <option value="">Tümü</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Durum</label>
+                                <select id="expStatus" class="select-input">
+                                    <option value="active">Sadece Aktif</option>
+                                    <option value="">Tümü</option>
+                                    <option value="inactive">Sadece Pasif</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Dosya Adı</label>
+                                <input type="text" id="expFilename" value="playlist" placeholder="playlist">
+                            </div>
+                        </div>
+
+                        <div class="form-actions" style="margin-bottom:20px">
+                            <button class="btn btn-primary" id="genM3UBtn"><i class="fas fa-cogs"></i> Oluştur</button>
+                            <button class="btn btn-success hidden" id="dlM3UBtn"><i class="fas fa-download"></i> İndir (.m3u)</button>
+                            <button class="btn btn-outline hidden" id="copyM3UBtn"><i class="fas fa-copy"></i> Kopyala</button>
+                        </div>
+
                         <div class="form-group">
-                            <label><i class="fas fa-sort-numeric-up"></i> Sıra No</label>
-                            <input type="number" id="chOrder" placeholder="0" min="0">
+                            <label>Önizleme</label>
+                            <textarea id="m3uOutput" rows="14" readonly placeholder="Oluşturulan M3U içeriği burada görünecek..."></textarea>
+                        </div>
+
+                        <div id="expStats" class="exp-stats hidden"></div>
+                    </div>
+                </section>
+
+                <!-- ========== SETTINGS ========== -->
+                <section id="page-settings" class="page">
+                    <div class="form-card">
+                        <h3><i class="fas fa-database"></i> Veri Yönetimi</h3>
+                        <div class="settings-actions">
+                            <button class="btn btn-primary" id="exportBackup"><i class="fas fa-download"></i> Yedek İndir (JSON)</button>
+                            <label class="btn btn-outline">
+                                <i class="fas fa-upload"></i> Yedek Yükle
+                                <input type="file" id="importBackup" accept=".json" hidden>
+                            </label>
+                            <button class="btn btn-danger" id="clearAllData"><i class="fas fa-trash-alt"></i> Tüm Verileri Sil</button>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-sticky-note"></i> Notlar</label>
-                        <textarea id="chNotes" rows="3" placeholder="Kanal hakkında notlar..."></textarea>
+
+                    <div class="form-card">
+                        <h3><i class="fas fa-info-circle"></i> Hakkında</h3>
+                        <p class="about-text">
+                            Bu panel tamamen tarayıcı üzerinde çalışır. Tüm verileriniz <strong>localStorage</strong>'da saklanır. 
+                            Sunucuya veri gönderilmez. Tarayıcı verilerini temizlerseniz kayıtlar silinir; 
+                            bu yüzden düzenli yedek almanız önerilir.
+                        </p>
                     </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" id="saveChannelBtn">
-                            <i class="fas fa-save"></i> Kaydet
-                        </button>
-                        <button type="button" class="btn btn-secondary" id="cancelEditBtn" style="display:none">
-                            <i class="fas fa-times"></i> İptal
-                        </button>
-                        <button type="reset" class="btn btn-secondary">
-                            <i class="fas fa-eraser"></i> Temizle
-                        </button>
-                    </div>
-                </form>
-            </section>
+                </section>
 
-            <!-- IMPORT M3U -->
-            <section id="page-importM3U" class="page">
-                <h2 class="page-title"><i class="fas fa-file-import"></i> M3U Dosyası İçe Aktar</h2>
-                
-                <div class="import-tabs">
-                    <button class="import-tab active" data-tab="file">
-                        <i class="fas fa-file-upload"></i> Dosyadan Yükle
-                    </button>
-                    <button class="import-tab" data-tab="text">
-                        <i class="fas fa-paste"></i> Metin Yapıştır
-                    </button>
-                    <button class="import-tab" data-tab="url">
-                        <i class="fas fa-globe"></i> URL'den Yükle
-                    </button>
-                </div>
-
-                <div id="importTab-file" class="import-tab-content active">
-                    <div class="upload-area" id="dropZone">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p>M3U / M3U8 dosyasını sürükleyip bırakın</p>
-                        <p>veya</p>
-                        <label class="btn btn-primary upload-btn">
-                            <i class="fas fa-folder-open"></i> Dosya Seç
-                            <input type="file" id="m3uFile" accept=".m3u,.m3u8,.txt" hidden>
-                        </label>
-                    </div>
-                </div>
-
-                <div id="importTab-text" class="import-tab-content">
-                    <div class="form-group">
-                        <label><i class="fas fa-paste"></i> M3U İçeriğini Yapıştırın</label>
-                        <textarea id="m3uText" rows="12" placeholder="#EXTM3U
-#EXTINF:-1 tvg-id=&quot;trt1&quot; tvg-name=&quot;TRT 1&quot; tvg-logo=&quot;logo.png&quot; group-title=&quot;Türkiye&quot;,TRT 1 HD
-http://stream-url.com/trt1
-..."></textarea>
-                    </div>
-                    <button id="parseTextBtn" class="btn btn-primary">
-                        <i class="fas fa-cogs"></i> Analiz Et
-                    </button>
-                </div>
-
-                <div id="importTab-url" class="import-tab-content">
-                    <div class="form-group">
-                        <label><i class="fas fa-globe"></i> M3U Dosya URL'si</label>
-                        <input type="url" id="m3uUrl" placeholder="http://example.com/playlist.m3u">
-                    </div>
-                    <button id="fetchUrlBtn" class="btn btn-primary">
-                        <i class="fas fa-download"></i> İndir ve Analiz Et
-                    </button>
-                    <p class="help-text"><i class="fas fa-info-circle"></i> CORS kısıtlaması nedeniyle bazı URL'ler çalışmayabilir.</p>
-                </div>
-
-                <!-- PREVIEW -->
-                <div id="importPreview" class="import-preview hidden">
-                    <h3><i class="fas fa-list"></i> Bulunan Kanallar (<span id="previewCount">0</span>)</h3>
-                    <div class="preview-actions">
-                        <button id="importSelectAll" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-check-double"></i> Tümünü Seç
-                        </button>
-                        <button id="importDeselectAll" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-square"></i> Seçimi Kaldır
-                        </button>
-                        <button id="importSelectedBtn" class="btn btn-sm btn-success">
-                            <i class="fas fa-file-import"></i> Seçilenleri İçe Aktar
-                        </button>
-                    </div>
-                    <div id="previewList" class="preview-list"></div>
-                </div>
-            </section>
-
-            <!-- EXPORT M3U -->
-            <section id="page-exportM3U" class="page">
-                <h2 class="page-title"><i class="fas fa-file-export"></i> M3U Dışa Aktar</h2>
-                <div class="export-options">
-                    <div class="form-group">
-                        <label><i class="fas fa-filter"></i> Grup Filtresi</label>
-                        <select id="exportGroup">
-                            <option value="">Tüm Gruplar</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label><i class="fas fa-toggle-on"></i> Durum Filtresi</label>
-                        <select id="exportStatus">
-                            <option value="active">Sadece Aktif</option>
-                            <option value="">Tümü</option>
-                            <option value="inactive">Sadece Pasif</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button id="generateM3U" class="btn btn-primary">
-                        <i class="fas fa-cogs"></i> M3U Oluştur
-                    </button>
-                    <button id="downloadM3U" class="btn btn-success" style="display:none">
-                        <i class="fas fa-download"></i> İndir
-                    </button>
-                    <button id="copyM3U" class="btn btn-secondary" style="display:none">
-                        <i class="fas fa-copy"></i> Kopyala
-                    </button>
-                </div>
-                <div class="form-group">
-                    <textarea id="m3uOutput" rows="15" readonly placeholder="M3U içeriği burada görünecek..."></textarea>
-                </div>
-            </section>
-
-            <!-- SETTINGS -->
-            <section id="page-settings" class="page">
-                <h2 class="page-title"><i class="fas fa-cog"></i> Ayarlar</h2>
-                
-                <div class="settings-section">
-                    <h3><i class="fas fa-key"></i> Şifre Değiştir</h3>
-                    <form id="changePasswordForm" class="channel-form">
-                        <div class="form-group">
-                            <label>Mevcut Şifre</label>
-                            <input type="password" id="currentPassword" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Yeni Şifre</label>
-                            <input type="password" id="newPassword" required minlength="4">
-                        </div>
-                        <div class="form-group">
-                            <label>Yeni Şifre (Tekrar)</label>
-                            <input type="password" id="confirmPassword" required minlength="4">
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Şifreyi Güncelle
-                        </button>
-                    </form>
-                </div>
-
-                <div class="settings-section">
-                    <h3><i class="fas fa-user-edit"></i> Kullanıcı Adı Değiştir</h3>
-                    <form id="changeUsernameForm" class="channel-form">
-                        <div class="form-group">
-                            <label>Yeni Kullanıcı Adı</label>
-                            <input type="text" id="newUsername" required minlength="3">
-                        </div>
-                        <div class="form-group">
-                            <label>Şifre (Doğrulama)</label>
-                            <input type="password" id="verifyPassword" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Kullanıcı Adını Güncelle
-                        </button>
-                    </form>
-                </div>
-
-                <div class="settings-section">
-                    <h3><i class="fas fa-palette"></i> Tema</h3>
-                    <div class="theme-options">
-                        <button class="theme-btn" data-theme="dark">
-                            <i class="fas fa-moon"></i> Koyu
-                        </button>
-                        <button class="theme-btn" data-theme="light">
-                            <i class="fas fa-sun"></i> Açık
-                        </button>
-                        <button class="theme-btn" data-theme="blue">
-                            <i class="fas fa-tint"></i> Mavi
-                        </button>
-                    </div>
-                </div>
-
-                <div class="settings-section danger-zone">
-                    <h3><i class="fas fa-exclamation-triangle"></i> Tehlikeli Bölge</h3>
-                    <button id="deleteAllChannels" class="btn btn-danger">
-                        <i class="fas fa-trash-alt"></i> Tüm Kanalları Sil
-                    </button>
-                    <button id="resetApp" class="btn btn-danger">
-                        <i class="fas fa-undo"></i> Uygulamayı Sıfırla
-                    </button>
-                    <button id="exportBackup" class="btn btn-secondary">
-                        <i class="fas fa-database"></i> Yedek Al (JSON)
-                    </button>
-                    <label class="btn btn-secondary">
-                        <i class="fas fa-upload"></i> Yedek Yükle
-                        <input type="file" id="importBackup" accept=".json" hidden>
-                    </label>
-                </div>
-            </section>
-
+            </div>
         </main>
     </div>
 
     <!-- EDIT MODAL -->
     <div id="editModal" class="modal hidden">
-        <div class="modal-overlay"></div>
-        <div class="modal-content">
+        <div class="modal-bg"></div>
+        <div class="modal-box">
             <div class="modal-header">
                 <h3><i class="fas fa-edit"></i> Kanal Düzenle</h3>
-                <button class="modal-close" id="modalClose">&times;</button>
+                <button class="modal-x" id="modalX">&times;</button>
             </div>
-            <form id="editForm" class="channel-form">
-                <input type="hidden" id="editId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Kanal Adı *</label>
-                        <input type="text" id="editName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Grup</label>
-                        <input type="text" id="editGroup" list="editGroupList">
-                        <datalist id="editGroupList"></datalist>
-                    </div>
+            <form id="editForm" class="modal-form">
+                <input type="hidden" id="edId">
+                <div class="form-grid">
+                    <div class="form-group"><label>Kanal Adı *</label><input type="text" id="edName" required></div>
+                    <div class="form-group"><label>Kategori</label><select id="edCategory" class="select-input"></select></div>
                 </div>
-                <div class="form-group">
-                    <label>Stream URL *</label>
-                    <input type="url" id="editUrl" required>
+                <div class="form-group"><label>Stream URL *</label><input type="url" id="edUrl" required></div>
+                <div class="form-grid">
+                    <div class="form-group"><label>Logo URL</label><input type="url" id="edLogo"></div>
+                    <div class="form-group"><label>EPG ID</label><input type="text" id="edEpg"></div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Logo URL</label>
-                        <input type="url" id="editLogo">
-                    </div>
-                    <div class="form-group">
-                        <label>EPG ID</label>
-                        <input type="text" id="editEpgId">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Durum</label>
-                        <select id="editStatus">
-                            <option value="active">Aktif</option>
-                            <option value="inactive">Pasif</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Sıra No</label>
-                        <input type="number" id="editOrder" min="0">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Notlar</label>
-                    <textarea id="editNotes" rows="2"></textarea>
+                <div class="form-grid">
+                    <div class="form-group"><label>Durum</label><select id="edStatus" class="select-input"><option value="active">Aktif</option><option value="inactive">Pasif</option></select></div>
+                    <div class="form-group"><label>Sıra</label><input type="number" id="edOrder" min="0"></div>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Güncelle
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="modalCancelBtn">
-                        <i class="fas fa-times"></i> İptal
-                    </button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Güncelle</button>
+                    <button type="button" class="btn btn-ghost" id="modalCancel"><i class="fas fa-times"></i> İptal</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- TOAST -->
-    <div id="toastContainer" class="toast-container"></div>
+    <div id="toasts" class="toast-wrap"></div>
 
     <script src="app.js"></script>
 </body>
